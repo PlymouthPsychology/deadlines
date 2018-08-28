@@ -1,0 +1,55 @@
+---
+title: Deadlines for masters modules 2017/18
+output: html_document
+---
+```{r, include=F, echo=F}
+library(readxl)
+library(tidyverse)
+library(lubridate)
+
+CURRENT_YEAR = 2018
+XMAS_START = dmy("15/12/18")
+XMAS_END = dmy("06/01/19")
+EASTER_START = dmy("06/04/19")
+EASTER_END = dmy("28/04/19")
+
+source('bizdays.R')
+```
+
+```{r, include=F}
+ttdata <- read_excel("timetable_28-8-2018.xlsx")
+last.sessions <- ttdata %>% 
+  mutate(module=str_extract(Name, "PSY\\d+")) %>% 
+  group_by(module) %>% 
+  arrange(End) %>% 
+  summarise(last_teaching_session = date(last(End))) 
+
+thisyear <- last.sessions %>% 
+  mutate(
+    deadline = last_teaching_session + weeks(3),
+    deadline = next_student_bizday(deadline),
+    deadline = nearest_thursday(deadline)
+  ) %>% 
+  # now add extras for return etc
+  rowwise() %>%
+  mutate(
+    deadline.self.cert.ec = next_student_bizday(deadline + days(5)),
+    deadline.ec = next_student_bizday(deadline + days(10)),
+    return.internal = next_staff_bizday(deadline + weeks(3)),
+    return.hard = next_staff_bizday(deadline + weeks(4)),
+    return.ec = next_staff_bizday(deadline.ec + weeks(4))
+  ) %>% 
+  ungroup() 
+
+# Write out the data
+write_csv(thisyear, 'deadlines.csv')
+
+```
+
+
+
+```{r, include=T}
+
+thisyear %>% pander::pander(split.tables=Inf)
+```
+
